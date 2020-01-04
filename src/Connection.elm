@@ -77,8 +77,6 @@ createCache nextInnovation =
 
 createInnovations : Cache -> List Edge -> (Cache, List Innovation)
 createInnovations incomingCache edges =
-    --foldl : (a -> b -> b) -> b -> List a -> b
-    --foldl : (Edge -> (Cache, List Innovation) -> (Cache, List Innovation)) -> (Cache, List Innovation) -> List Edge -> (Cache, List Innovation)
     let
         f : Edge -> (Cache, List Innovation) -> (Cache, List Innovation)
         f edge (cache, list) =

@@ -3,7 +3,6 @@ module Genome exposing (Genome, createUnconnected, createConnected, toString)
 import Connection exposing (Connection, Cache)
 import List
 import Random exposing (Generator)
-import List.Extra
 import Utils exposing (format, s)
 
 type Genome = Genome 
@@ -28,11 +27,8 @@ createConnected sensors outputs cache =
         (Genome genome) = createUnconnected sensors outputs 
         (updatedCache, generator) = Connection.generateAll genome.sensors genome.outputs cache
     in
-    --(Genome {genome | connections = edges}, id, cache) |> Random.constant
     generator |> Random.map (\connections -> (Genome { genome | connections = connections }, updatedCache) )
 
--- empty : Genome
--- empty = Genome {sensors = [], outputs = [], hidden = [], connections = []}
 
 toString : Genome -> String
 toString genome =
