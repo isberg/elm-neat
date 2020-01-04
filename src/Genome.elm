@@ -1,4 +1,4 @@
-module Genome exposing (Genome, createUnconnected, createConnected, distance, toString)
+module Genome exposing (Genome, createUnconnected, createManyUnconnected, createConnected, createManyConnected, distance, toString)
 
 import Connection exposing (Connection, Cache)
 import List
@@ -22,6 +22,10 @@ createUnconnected sensors outputs =
     , connections = IntDict.fromList []
     }
 
+createManyUnconnected : Int -> Int -> Int -> List Genome
+createManyUnconnected sensors outputs count =
+    createUnconnected sensors outputs |> List.repeat count
+
 createConnected : Int -> Int -> Cache -> Generator (Genome, Cache)
 createConnected sensors outputs cache =
     let
@@ -30,6 +34,22 @@ createConnected sensors outputs cache =
     in
     generator |> Random.map (\connections -> (Genome { genome | connections = connections }, updatedCache) )
 
+createManyConnected : Int -> Int -> Int -> Cache -> Generator (List Genome, Cache)
+createManyConnected sensors outputs count cache =
+    let
+        createManyRec : Int -> Cache -> List Genome -> Generator (List Genome, Cache)
+        createManyRec n rcache list =
+            if n <= 0 then
+                (list, rcache) |> Random.constant
+            else
+                let
+                    generate = createConnected sensors outputs rcache  
+                in
+                generate 
+                |> Random.andThen (\(genome, lcache) -> createManyRec (n - 1) lcache (list ++ [genome]))
+    in
+    createManyRec count cache [] 
+    
 
 distance : Genome -> Genome -> Float
 distance (Genome a) (Genome b) =
