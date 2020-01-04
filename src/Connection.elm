@@ -1,10 +1,11 @@
-module Connection exposing (Connection, Cache, create, toString, fromInnovation, generateAll, createCache)
+module Connection exposing (Connection, Cache, create, toString, fromInnovation, generateAll, createCache, distance)
 
 import Dict exposing (Dict)
 import Utils exposing (format, s)
 import Random exposing (Generator)
 import Random.Extra exposing (combine)
 import List.Extra exposing (lift2)
+import IntDict exposing (IntDict)
 
 weightSpan : Float
 weightSpan = 3.0
@@ -53,16 +54,32 @@ fromInnovation {id, edge} =
         (\weight -> create id from to weight True) 
         (Random.float -weightSpan weightSpan)
 
-generateAll : List Int -> List Int -> Cache -> (Cache, Generator (List Connection))
+generateAll : List Int -> List Int -> Cache -> (Cache, Generator (IntDict Connection))
 generateAll inputs outputs cache =
     let
         edges = calculateUnconnected inputs outputs []
         (updatedCache, innovations) = createInnovations cache edges
-        generator = innovations |> List.map fromInnovation |> combine
+        generator : Generator (IntDict Connection)
+        generator = 
+            innovations |> IntDict.values |> List.map fromInnovation |> combine 
+            |> Random.map (\list -> list |> List.map (\(Connection c) -> (c.innovationId, Connection c)) |> IntDict.fromList)
     in
     ( updatedCache
     , generator
     )
+
+
+distance : Float -> Float -> IntDict Connection -> IntDict Connection -> Float
+distance c12 c3 x y = 
+    let
+        excess_or_disjoint = IntDict.diff (IntDict.union x y) (IntDict.intersect x y) |> IntDict.size |> toFloat
+        getCommonWeights : IntDict Connection -> IntDict Connection -> List Float
+        getCommonWeights alpha beta = IntDict.intersect alpha beta |> IntDict.values |> List.map (\(Connection c) -> c.weight)
+        x_weights = getCommonWeights x y
+        y_weights = getCommonWeights y x
+        weightDiff = List.map2 ((-)) x_weights y_weights |> List.sum
+    in
+    c12 * excess_or_disjoint + c3 * weightDiff
 
 
 toString : Connection -> String
@@ -77,19 +94,19 @@ createCache nextInnovation =
     Cache nextInnovation Dict.empty
 
 
-createInnovations : Cache -> List Edge -> (Cache, List Innovation)
+createInnovations : Cache -> List Edge -> (Cache, IntDict Innovation)
 createInnovations incomingCache edges =
     let
-        f : Edge -> (Cache, List Innovation) -> (Cache, List Innovation)
+        f : Edge -> (Cache, IntDict Innovation) -> (Cache, IntDict Innovation)
         f edge (cache, list) =
             let
                 (updatedCache, innovation) = createInnovation cache edge
             in
             ( updatedCache
-            , list ++ [innovation]
+            , list |> IntDict.insert innovation.id innovation
             )
     in
-    List.foldl f (incomingCache, []) edges
+    List.foldl f (incomingCache, IntDict.empty) edges
 
 createInnovation : Cache -> Edge -> (Cache, Innovation)
 createInnovation {nextInnovation, cache} edge =

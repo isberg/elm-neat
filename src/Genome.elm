@@ -1,15 +1,16 @@
-module Genome exposing (Genome, createUnconnected, createConnected, toString)
+module Genome exposing (Genome, createUnconnected, createConnected, distance, toString)
 
 import Connection exposing (Connection, Cache)
 import List
 import Random exposing (Generator)
 import Utils exposing (format, s)
+import IntDict exposing (IntDict)
 
 type Genome = Genome 
     { sensors : List Int
     , outputs : List Int
     , hidden : List Int
-    , connections : List Connection
+    , connections : IntDict Connection
     }
 
 createUnconnected : Int -> Int -> Genome
@@ -18,7 +19,7 @@ createUnconnected sensors outputs =
     { sensors = List.range 0 sensors
     , outputs = List.range (sensors + 1) (sensors + outputs)
     , hidden = []
-    , connections = []
+    , connections = IntDict.fromList []
     }
 
 createConnected : Int -> Int -> Cache -> Generator (Genome, Cache)
@@ -30,11 +31,16 @@ createConnected sensors outputs cache =
     generator |> Random.map (\connections -> (Genome { genome | connections = connections }, updatedCache) )
 
 
+distance : Genome -> Genome -> Float
+distance (Genome a) (Genome b) =
+    Connection.distance 1 0.5 a.connections b.connections
+
 toString : Genome -> String
 toString genome =
     let
         c2s = 
-            List.map Connection.toString
+            IntDict.values
+            >> List.map Connection.toString
             >> String.join ", "
     in
     case genome of
