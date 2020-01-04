@@ -19,8 +19,10 @@ type Connection = Connection
 
 type alias Cache = 
     { nextInnovation : Int
-    , cache : Dict Edge Int
+    , cache : InnovationDict
     }
+
+type alias InnovationDict = Dict Edge Int
 
 type alias Innovation =
     { id : Int
@@ -54,7 +56,7 @@ fromInnovation {id, edge} =
 generateAll : List Int -> List Int -> Cache -> (Cache, Generator (List Connection))
 generateAll inputs outputs cache =
     let
-        edges = lift2 (\from to -> (from, to)) inputs outputs
+        edges = calculateUnconnected inputs outputs []
         (updatedCache, innovations) = createInnovations cache edges
         generator = innovations |> List.map fromInnovation |> combine
     in
@@ -100,3 +102,16 @@ createInnovation {nextInnovation, cache} edge =
             ( Cache (nextInnovation + 1) (cache |> Dict.insert edge nextInnovation)
             , Innovation nextInnovation edge
             )
+
+calculateUnconnected : List Int -> List Int -> List Edge -> List Edge
+calculateUnconnected inputs outputs connected =
+    let
+        toDict = 
+            List.map (\edge -> (edge, True)) 
+            >> Dict.fromList
+        fromDict = Dict.keys
+        diff a b = Dict.diff (toDict a) (toDict b) |> fromDict
+        all = lift2 (\i o -> (i, o)) inputs outputs 
+        unconnected = diff all connected
+    in
+    unconnected
